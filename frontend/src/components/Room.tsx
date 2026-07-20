@@ -452,7 +452,8 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
       const res = await fetch(`${BACKEND_URL}/api/playlists`, { 
         credentials: 'include',
         headers: {
-          'ngrok-skip-browser-warning': 'true'
+          'ngrok-skip-browser-warning': 'true',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       if (res.ok) {
@@ -483,7 +484,8 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
         method: 'DELETE',
         credentials: 'include',
         headers: {
-          'ngrok-skip-browser-warning': 'true'
+          'ngrok-skip-browser-warning': 'true',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       if (res.ok) {
@@ -505,7 +507,8 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
+          'ngrok-skip-browser-warning': 'true',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         credentials: 'include',
         body: JSON.stringify({ url: importUrl.trim() })
@@ -547,7 +550,8 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/search?q=${encodeURIComponent(searchQuery)}`, {
         headers: {
-          'ngrok-skip-browser-warning': 'true'
+          'ngrok-skip-browser-warning': 'true',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       const data = await res.json();

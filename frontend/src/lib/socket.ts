@@ -6,6 +6,9 @@ const URL = BACKEND_URL;
 
 export const socket: Socket = io(URL, {
   autoConnect: true,
+  auth: (cb) => {
+    cb({ token: localStorage.getItem('auth_token') });
+  },
   withCredentials: true,
   extraHeaders: {
     'ngrok-skip-browser-warning': 'true'

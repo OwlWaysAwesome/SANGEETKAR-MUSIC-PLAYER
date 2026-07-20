@@ -90,13 +90,8 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('auth_token', token, { 
-      httpOnly: true, 
-      secure: true, // Required for cross-site cookies (Cloudflare Tunnel uses HTTPS)
-      sameSite: 'none', // Required because Netlify and Cloudflare Tunnel are on different domains
-      maxAge: 1000 * 60 * 60 * 24 * 7 
-    });
-    res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173');
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}?token=${token}`);
   } catch (error: any) {
     console.error('Discord auth error:', error.response?.data || error.message || error);
     res.status(500).send('Authentication failed');
@@ -124,7 +119,8 @@ app.get('/api/auth/mock', async (req, res) => {
 });
 
 app.get('/api/auth/me', async (req, res) => {
-  const token = req.cookies.auth_token;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
@@ -247,7 +243,8 @@ app.get('/api/stream/:videoId', async (req, res) => {
 
 // --- Playlist Routes ---
 app.post('/api/playlists/import', async (req, res) => {
-  const token = req.cookies.auth_token;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   const { url } = req.body;
@@ -304,7 +301,8 @@ app.post('/api/playlists/import', async (req, res) => {
 });
 
 app.get('/api/playlists', async (req, res) => {
-  const token = req.cookies.auth_token;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
@@ -320,7 +318,8 @@ app.get('/api/playlists', async (req, res) => {
 
 // --- Delete Playlist Route ---
 app.delete('/api/playlists/:id', async (req, res) => {
-  const token = req.cookies.auth_token;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
@@ -348,7 +347,8 @@ app.get('/api/stream/:videoId', (req, res) => {
 
 // --- Rooms Route ---
 app.post('/api/rooms', async (req, res) => {
-  const token = req.cookies.auth_token;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
@@ -403,9 +403,7 @@ io.on('connection', (socket: Socket) => {
 
     // Extract DB user ID from JWT if available
     let dbUserId = null;
-    const cookieHeader = socket.handshake.headers.cookie || '';
-    const match = cookieHeader.match(/(?:^|;\s*)auth_token=([^;]*)/);
-    const token = match ? match[1] : null;
+    const token = socket.handshake.auth?.token || null;
 
     if (token) {
       try {

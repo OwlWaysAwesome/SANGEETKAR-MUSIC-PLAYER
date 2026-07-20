@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { BACKEND_URL } from '../config';
+import { socket } from '../lib/socket';
 
 export interface AuthUser {
   id: string;
@@ -12,12 +13,14 @@ interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean | null;
   loading: boolean;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: null,
   loading: true,
+  logout: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -26,10 +29,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 1. Check for token in URL
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromUrl = params.get('token');
+    
+    if (tokenFromUrl) {
+      localStorage.setItem('auth_token', tokenFromUrl);
+      // Clean the URL immediately without reloading the page
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const currentToken = localStorage.getItem('auth_token');
+    
+    if (!currentToken) {
+      setIsAuthenticated(false);
+      setLoading(false);
+      return;
+    }
+
     fetch(`${BACKEND_URL}/api/auth/me`, { 
-      credentials: 'include',
       headers: {
-        'ngrok-skip-browser-warning': 'true'
+        'ngrok-skip-browser-warning': 'true',
+        'Authorization': `Bearer ${currentToken}`
       }
     })
       .then(res => {
@@ -42,6 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else {
           setIsAuthenticated(false);
           setLoading(false);
+          localStorage.removeItem('auth_token'); // Clear invalid token
         }
       })
       .catch(() => {
@@ -50,8 +72,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
   }, []);
 
+  const logout = () => {
+    localStorage.removeItem('auth_token');
+    setIsAuthenticated(false);
+    setUser(null);
+    socket.disconnect();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

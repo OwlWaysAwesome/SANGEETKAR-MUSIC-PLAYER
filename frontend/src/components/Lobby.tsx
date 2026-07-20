@@ -14,7 +14,8 @@ const Lobby: React.FC = () => {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'ngrok-skip-browser-warning': 'true'
+          'ngrok-skip-browser-warning': 'true',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       if (res.ok) {
