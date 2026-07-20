@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #131317;
+  --color-surface: #1E293B;
+  --color-primary: #ffffff;
+  --color-accent: #3626ce;
+  --color-on-surface-variant: #c4c7c8;
+  --color-secondary-container: #3626ce;
+  --color-tertiary-container: #ffd6fd;
+}
+
+body {
+  margin: 0;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  @apply bg-background text-white selection:bg-secondary-container selection:text-white;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Typography Utilities */
+.font-playfair {
+  font-family: 'Playfair Display', serif;
+}
+
+/* Atmospheric Lighting Mesh Gradients */
+.ambient-mesh {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, var(--theme-color, #a855f7) 0%, transparent 70%);
+  opacity: 0.35;
+  filter: blur(120px) saturate(150%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+    background: rgba(17, 17, 21, 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-button-primary {
+    background-color: #ffffff;
+    color: #131317;
+    transition: all 0.3s ease;
+}
+.glass-button-primary:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: scale(1.02);
+}
+.glass-button-primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-surface rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary;
+}
+
+/* Media Display Ambient Glow */
+.media-glow {
+    position: absolute;
+    inset: -20px;
+    background: conic-gradient(from 180deg at 50% 50%, color-mix(in srgb, var(--theme-color, #a855f7) 40%, transparent) 0deg, color-mix(in srgb, var(--theme-color, #a855f7) 20%, transparent) 90deg, color-mix(in srgb, var(--theme-color, #a855f7) 40%, transparent) 180deg, color-mix(in srgb, var(--theme-color, #a855f7) 20%, transparent) 270deg, color-mix(in srgb, var(--theme-color, #a855f7) 40%, transparent) 360deg);
+    filter: blur(40px);
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0.6;
+    animation: rotateGlow 10s linear infinite;
+}
+
+@keyframes rotateGlow {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Soft pulsing animation for active track */
+@keyframes subtlePulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255, 0.05); }
+    70% { box-shadow: 0 0 0 10px rgba(255,255,255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255, 0); }
+}
+.animate-subtle-pulse {
+    animation: subtlePulse 2s infinite;
+}

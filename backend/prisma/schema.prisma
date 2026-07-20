@@ -1,0 +1,31 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  discordId String     @unique
+  username  String
+  avatar    String?
+  playlists Playlist[]
+}
+
+model Playlist {
+  id      String @id @default(uuid())
+  name    String
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  tracks  String @default("[]") // JSON stringified array of track objects
+}
+
+model Room {
+  id        String   @id
+  queue     String   @default("[]") // JSON stringified array of track objects
+  updatedAt DateTime @updatedAt
+}
