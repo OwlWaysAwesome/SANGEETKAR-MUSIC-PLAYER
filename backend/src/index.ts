@@ -478,16 +478,35 @@ io.on('connection', (socket: Socket) => {
       io.to(roomId).emit('room_state', room);
     }
 
+    // Broadcast user joined
+    socket.to(roomId).emit('user:joined', {
+      id: user.id || user.socketId,
+      username: user.username || 'A listener',
+      avatar: user.avatar
+    });
+
     console.log(`[join_room] Socket ${socket.id} (DB User: ${dbUserId || 'None'}) successfully joined ${roomId} as ${user.isHost ? 'Host' : 'Listener'}`);
   });
 
   socket.on('disconnect', () => {
     const roomId = socketRoomMap.get(socket.id);
     if (roomId) {
+      const room = roomManager.getRoom(roomId);
+      const leavingUser = room?.users.find(u => u.socketId === socket.id);
+      
       roomManager.leaveRoom(roomId, socket.id);
       socketRoomMap.delete(socket.id);
-      const room = roomManager.getRoom(roomId);
-      if (room) io.to(roomId).emit('room_state', room);
+      
+      const updatedRoom = roomManager.getRoom(roomId);
+      if (updatedRoom) {
+        io.to(roomId).emit('room_state', updatedRoom);
+        if (leavingUser) {
+          io.to(roomId).emit('user:left', {
+            username: leavingUser.username || 'A listener',
+            avatar: leavingUser.avatar
+          });
+        }
+      }
       console.log(`User ${socket.id} left room ${roomId}`);
     }
   });
