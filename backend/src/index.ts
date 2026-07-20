@@ -89,7 +89,12 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('auth_token', token, { httpOnly: true, secure: false, sameSite: 'lax', maxAge: 1000 * 60 * 60 * 24 * 7 });
+    res.cookie('auth_token', token, { 
+      httpOnly: true, 
+      secure: true, // Required for cross-site cookies (Cloudflare Tunnel uses HTTPS)
+      sameSite: 'none', // Required because Netlify and Cloudflare Tunnel are on different domains
+      maxAge: 1000 * 60 * 60 * 24 * 7 
+    });
     res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173');
   } catch (error: any) {
     console.error('Discord auth error:', error.response?.data || error.message || error);

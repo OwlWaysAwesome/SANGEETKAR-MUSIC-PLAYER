@@ -449,7 +449,12 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
   const fetchPlaylists = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/playlists`, { credentials: 'include' });
+      const res = await fetch(`${BACKEND_URL}/api/playlists`, { 
+        credentials: 'include',
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setPlaylists(data);
@@ -476,7 +481,10 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/playlists/${playlistId}`, {
         method: 'DELETE',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
       });
       if (res.ok) {
         setPlaylists(prev => prev.filter(p => p.id !== playlistId));
@@ -495,7 +503,10 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/playlists/import`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
         credentials: 'include',
         body: JSON.stringify({ url: importUrl.trim() })
       });
@@ -534,7 +545,11 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/search?q=${encodeURIComponent(searchQuery)}`);
+      const res = await fetch(`${BACKEND_URL}/api/search?q=${encodeURIComponent(searchQuery)}`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      });
       const data = await res.json();
       setSearchResults(data);
     } catch (e) {

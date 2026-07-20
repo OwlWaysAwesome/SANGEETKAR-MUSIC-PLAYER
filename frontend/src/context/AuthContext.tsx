@@ -26,7 +26,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/api/auth/me`, { credentials: 'include' })
+    fetch(`${BACKEND_URL}/api/auth/me`, { 
+      credentials: 'include',
+      headers: {
+        'ngrok-skip-browser-warning': 'true'
+      }
+    })
       .then(res => {
         if (res.ok) {
           res.json().then(data => {

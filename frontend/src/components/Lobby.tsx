@@ -12,7 +12,10 @@ const Lobby: React.FC = () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/rooms`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
       });
       if (res.ok) {
         const data = await res.json();
