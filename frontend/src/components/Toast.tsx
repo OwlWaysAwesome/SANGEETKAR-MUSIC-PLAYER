@@ -7,10 +7,11 @@ interface Toast {
   message: string;
   type: ToastType;
   duration: number;
+  avatar?: string;   // optional avatar URL for join/leave toasts
 }
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType, duration?: number) => void;
+  showToast: (message: string, type?: ToastType, duration?: number, avatar?: string) => void;
 }
 
 const ToastContext = createContext<ToastContextType>({ showToast: () => {} });
@@ -70,13 +71,12 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
     }, 350);
   }, []);
 
-  const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 4000) => {
+  const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 4000, avatar?: string) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const toast: Toast = { id, message, type, duration };
+    const toast: Toast = { id, message, type, duration, avatar };
 
     setToasts(prev => {
       const next = [...prev, toast];
-      // Max 4 visible
       if (next.length > 4) {
         const oldest = next[0];
         removeToast(oldest.id);
@@ -98,7 +98,7 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
           return (
             <div
               key={toast.id}
-              className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-2xl shadow-2xl cursor-pointer transition-all
+              className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-2xl shadow-2xl cursor-pointer transition-all relative
                 ${TYPE_STYLES[toast.type]}
                 ${isRemoving ? 'toast-exit' : 'toast-enter'}
               `}
@@ -106,9 +106,20 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
             >
               {/* Accent bar */}
               <div className={`absolute left-0 top-2 bottom-2 w-[3px] rounded-full ${ACCENT_COLORS[toast.type]}`} />
-              <div className="ml-1">
-                {TOAST_ICONS[toast.type]}
-              </div>
+              
+              {/* Avatar or Icon */}
+              {toast.avatar ? (
+                <img 
+                  src={toast.avatar} 
+                  alt="" 
+                  className="w-7 h-7 rounded-full object-cover flex-shrink-0 ml-1 border border-white/10" 
+                />
+              ) : (
+                <div className="ml-1">
+                  {TOAST_ICONS[toast.type]}
+                </div>
+              )}
+              
               <span className="text-sm font-medium leading-snug">{toast.message}</span>
             </div>
           );
