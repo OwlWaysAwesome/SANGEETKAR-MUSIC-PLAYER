@@ -345,6 +345,43 @@ app.get('/api/stream/:videoId', (req, res) => {
   });
 });
 
+// --- Lyrics Proxy Route ---
+app.get('/api/lyrics', async (req, res) => {
+  const title = req.query.title as string;
+  const artist = req.query.artist as string;
+
+  if (!title) return res.status(400).json({ error: 'Title required' });
+
+  try {
+    // Search lrclib.net for lyrics
+    const searchUrl = `https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}${artist ? `&artist_name=${encodeURIComponent(artist)}` : ''}`;
+    
+    const response = await axios.get(searchUrl, {
+      headers: {
+        'User-Agent': 'Sangeetkar Music Player v1.0 (https://github.com/sangeetkar)'
+      },
+      timeout: 8000
+    });
+
+    if (!response.data || response.data.length === 0) {
+      return res.status(404).json({ error: 'No lyrics found' });
+    }
+
+    // Pick the best match (first result with synced lyrics, or first result)
+    const bestMatch = response.data.find((r: any) => r.syncedLyrics) || response.data[0];
+
+    res.json({
+      trackName: bestMatch.trackName,
+      artistName: bestMatch.artistName,
+      syncedLyrics: bestMatch.syncedLyrics || null,
+      plainLyrics: bestMatch.plainLyrics || null,
+    });
+  } catch (error: any) {
+    console.error('[Lyrics] Error fetching lyrics:', error.message);
+    res.status(500).json({ error: 'Failed to fetch lyrics' });
+  }
+});
+
 // --- Rooms Route ---
 app.post('/api/rooms', async (req, res) => {
   const authHeader = req.headers.authorization;
@@ -769,6 +806,16 @@ io.on('connection', (socket: Socket) => {
 
     room.isShuffle = data.shuffle;
     io.to(data.roomId).emit('room_state', roomManager.getRoom(data.roomId));
+  });
+
+  // --- Floating Reactions ---
+  socket.on('reaction:send', (data: { roomId: string, emoji: string, username?: string }) => {
+    if (!data.roomId || !data.emoji) return;
+    // Broadcast to everyone in the room EXCEPT the sender (sender shows it locally)
+    socket.to(data.roomId).emit('reaction:broadcast', {
+      emoji: data.emoji,
+      username: data.username
+    });
   });
 
 });

@@ -105,3 +105,90 @@ body {
 .animate-subtle-pulse {
     animation: subtlePulse 2s infinite;
 }
+
+/* ═══════════════════════════════════════════
+   Toast Notification Animations
+   ═══════════════════════════════════════════ */
+@keyframes toastEnter {
+  0% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.8);
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+@keyframes toastExit {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.8);
+    filter: blur(4px);
+  }
+}
+.toast-enter {
+  animation: toastEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.toast-exit {
+  animation: toastExit 0.35s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+/* ═══════════════════════════════════════════
+   Floating Reaction Animations
+   ═══════════════════════════════════════════ */
+@keyframes reactionFloat {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-15vh) scale(1.15) rotate(-8deg);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-40vh) scale(1.05) rotate(6deg);
+  }
+  80% {
+    opacity: 0.4;
+    transform: translateY(-60vh) scale(0.9) rotate(-4deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-75vh) scale(0.7) rotate(10deg);
+  }
+}
+.reaction-float {
+  animation: reactionFloat 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  pointer-events: none;
+}
+
+.reaction-bar {
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+.reaction-bar:hover {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════
+   Lyrics Panel Styling
+   ═══════════════════════════════════════════ */
+.lyrics-line {
+  transform-origin: left center;
+  transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.lyrics-active {
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px var(--theme-color, rgba(168, 85, 247, 0.2));
+}
+.lyrics-container {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+}

@@ -4,6 +4,7 @@ import Room from './components/Room';
 import Login from './pages/Login';
 import Lobby from './components/Lobby';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './components/Toast';
 
 const RequireAuth = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -17,29 +18,31 @@ const RequireAuth = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route 
-            path="/" 
-            element={
-              <RequireAuth>
-                <Lobby />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/room/:id" 
-            element={
-              <RequireAuth>
-                <RoomWrapper />
-              </RequireAuth>
-            } 
-          />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route 
+              path="/" 
+              element={
+                <RequireAuth>
+                  <Lobby />
+                </RequireAuth>
+              } 
+            />
+            <Route 
+              path="/room/:id" 
+              element={
+                <RequireAuth>
+                  <RoomWrapper />
+                </RequireAuth>
+              } 
+            />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 
@@ -51,3 +54,4 @@ function RoomWrapper() {
 }
 
 export default App;
+

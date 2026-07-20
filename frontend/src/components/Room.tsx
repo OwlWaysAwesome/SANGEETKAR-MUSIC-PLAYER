@@ -5,6 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Disc3, Search, Plus, ListMusic, Trash2, Volume2, GripVertical, Link, Loader2, Repeat, Shuffle, Shield, ShieldOff } from 'lucide-react';
 import { FastAverageColor } from 'fast-average-color';
 import { BACKEND_URL } from '../config';
+import { useToast } from './Toast';
+import FloatingReactions from './FloatingReactions';
+import LyricsPanel from './LyricsPanel';
 import {
   DndContext,
   closestCenter,
@@ -107,7 +110,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
   const [history, setHistory] = useState<SearchResult[]>([]);
   
   // Playlists state
-  const [activeTab, setActiveTab] = useState<'queue' | 'playlists' | 'history' | 'people'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'playlists' | 'history' | 'lyrics' | 'people'>('queue');
   const [users, setUsers] = useState<any[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [playlists, setPlaylists] = useState<any[]>([]);
@@ -120,10 +123,10 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
   const [currentTrack, setCurrentTrack] = useState<SearchResult | null>(null);
   const [thumbnailError, setThumbnailError] = useState(false);
   const [dominantColor, setDominantColor] = useState('#a855f7');
-  const [playerError, setPlayerError] = useState<string | null>(null);
 
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [allowGuestControl, setAllowGuestControl] = useState(true);
   const [loopMode, setLoopMode] = useState<'off' | 'track' | 'queue'>('off');
   const [isShuffle, setIsShuffle] = useState(false);
@@ -194,8 +197,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
     };
     const onError = () => {
       console.error('[Jammer] Audio element error for video:', videoIdRef.current, audio.error);
-      setPlayerError(`Playback failed — skipping...`);
-      setTimeout(() => setPlayerError(null), 3000);
+      showToast('Playback failed — skipping...', 'error');
       if (isHostRef.current && !isTransitioningRef.current) {
         isTransitioningRef.current = true;
         setTimeout(() => {
@@ -285,7 +287,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
   useEffect(() => {
     
     socket.on('force_disconnect', (data) => {
-      alert(data.reason === 'banned' ? 'You have been banned from this room.' : 'You have been kicked from this room.');
+      showToast(data.reason === 'banned' ? 'You have been banned from this room.' : 'You have been kicked from this room.', 'error', 5000);
       navigate('/');
     });
 
@@ -524,6 +526,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
       socket.emit('host:queue_add_bulk', { roomId, items: tracks });
       setImportUrl('');
       setActiveTab('queue');
+      showToast(`Imported ${tracks.length} tracks!`, 'success');
     } catch (e) {
       console.error('Import failed', e);
       setImportError('Network error. Please try again.');
@@ -565,6 +568,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
   const addToQueue = (item: SearchResult) => {
     socket.emit('host:queue_add', { roomId, item });
+    showToast(`Added "${item.title}"`, 'success');
     setSearchResults([]);
     setSearchQuery('');
   };
@@ -693,7 +697,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
           <div className="flex items-center gap-2">
             <div 
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 glass-panel cursor-pointer hover:bg-white/10 transition-colors" 
-              onClick={() => navigator.clipboard.writeText(window.location.href)} 
+              onClick={() => { navigator.clipboard.writeText(window.location.href); showToast('Room link copied!', 'info'); }} 
               title="Copy Room Link"
             >
               <Link className="w-3.5 h-3.5 text-white/40" />
@@ -728,15 +732,8 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
         {/* Hidden Audio Player — streams from backend proxy, bypasses embedding restrictions */}
         <audio ref={audioRef} preload="auto" style={{ display: 'none' }} />
 
-        {/* Player Error Toast */}
-        {playerError && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="bg-red-500/20 border border-red-500/30 backdrop-blur-xl text-red-200 text-sm px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2">
-              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              {playerError}
-            </div>
-          </div>
-        )}
+        {/* Floating Reactions */}
+        <FloatingReactions roomId={roomId} username={user?.username} />
 
         {/* Center: Album Artwork Display */}
         <div className="flex-grow flex items-center justify-center relative w-full mb-6 z-10 min-h-0">
@@ -977,6 +974,13 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
             <div className={`absolute bottom-0 left-0 h-[2px] bg-white rounded-t-full transition-all duration-300 ${activeTab === 'history' ? 'w-full' : 'w-0 group-hover:w-full opacity-30'}`}></div>
           </button>
           <button 
+            onClick={() => setActiveTab('lyrics')}
+            className="pb-3 relative group whitespace-nowrap"
+          >
+            <span className={`text-[11px] tracking-widest uppercase font-medium ${activeTab === 'lyrics' ? 'text-white' : 'text-white/40 group-hover:text-white/70'} transition-colors`}>Lyrics</span>
+            <div className={`absolute bottom-0 left-0 h-[2px] bg-white rounded-t-full transition-all duration-300 ${activeTab === 'lyrics' ? 'w-full' : 'w-0 group-hover:w-full opacity-30'}`}></div>
+          </button>
+          <button 
             onClick={() => setActiveTab('people')}
             className="pb-3 relative group whitespace-nowrap"
           >
@@ -1040,6 +1044,8 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
               )}
             </>
           
+          ) : activeTab === 'lyrics' ? (
+            <LyricsPanel currentTrack={currentTrack} progress={progress} />
           ) : activeTab === 'people' ? (
             <div className="flex flex-col p-4 gap-2">
               {users.map((u, i) => (
@@ -1059,10 +1065,12 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                   {isHost && u.id !== socket.id && (
                     <div className="relative">
                        <button onClick={() => {
-                         if (confirm('Kick this user?')) socket.emit('host:kick_user', { roomId, targetSocketId: u.id });
+                         socket.emit('host:kick_user', { roomId, targetSocketId: u.id });
+                         showToast(`Kicked ${u.username || 'user'}`, 'warning');
                        }} className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded mr-2">Kick</button>
                        <button onClick={() => {
-                         if (confirm('Ban this user?')) socket.emit('host:ban_user', { roomId, targetSocketId: u.id });
+                         socket.emit('host:ban_user', { roomId, targetSocketId: u.id });
+                         showToast(`Banned ${u.username || 'user'}`, 'error');
                        }} className="text-[10px] bg-red-500/20 text-red-400 hover:bg-red-500/40 px-2 py-1 rounded">Ban</button>
                     </div>
                   )}
