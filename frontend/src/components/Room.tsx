@@ -415,7 +415,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
   useEffect(() => {
     if (currentTrack) {
-      document.title = `${currentTrack.title} | SANGEETKAR`;
+      document.title = `${currentTrack.title} • Sangeetkar`;
       
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -435,7 +435,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
         navigator.mediaSession.setActionHandler('nexttrack', playNext);
       }
     } else {
-      document.title = 'SANGEETKAR';
+      document.title = 'Sangeetkar';
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack]);
