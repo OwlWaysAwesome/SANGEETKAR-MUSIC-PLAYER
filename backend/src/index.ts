@@ -658,12 +658,7 @@ io.on('connection', (socket: Socket) => {
 
     let nextItem = null;
     if (room.queue.length > 0) {
-      if (room.isShuffle) {
-        const randomIndex = Math.floor(Math.random() * room.queue.length);
-        nextItem = room.queue.splice(randomIndex, 1)[0];
-      } else {
-        nextItem = room.queue.shift();
-      }
+      nextItem = room.queue.shift();
     }
 
     if (nextItem) {
@@ -824,6 +819,16 @@ io.on('connection', (socket: Socket) => {
     if (!checkControlPermission(room, socket.id)) return;
 
     room.isShuffle = data.shuffle;
+    
+    // Actually shuffle the queue array so the UI reflects it
+    if (data.shuffle && room.queue.length > 1) {
+      for (let i = room.queue.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [room.queue[i], room.queue[j]] = [room.queue[j], room.queue[i]];
+      }
+      io.to(data.roomId).emit('queue_updated', room.queue);
+    }
+    
     io.to(data.roomId).emit('room_state', roomManager.getRoom(data.roomId));
   });
 

@@ -790,9 +790,11 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
         </div>
 
         {/* Bottom: Media Control Bar */}
-        <footer className="glass-panel rounded-2xl p-5 flex flex-col gap-5 flex-shrink-0 relative overflow-hidden group/footer z-20 w-full max-w-3xl mx-auto">
+        <footer className="glass-panel rounded-2xl p-5 flex flex-col gap-5 flex-shrink-0 relative group/footer z-20 w-full max-w-3xl mx-auto">
           {/* Hover gradient effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent opacity-0 group-hover/footer:opacity-100 transition-opacity duration-1000 -translate-x-full group-hover/footer:translate-x-full ease-in-out pointer-events-none"></div>
+          <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent opacity-0 group-hover/footer:opacity-100 transition-opacity duration-1000 -translate-x-full group-hover/footer:translate-x-full ease-in-out"></div>
+          </div>
           
           {/* Top Row: Track Info & Secondary Controls */}
           <div className="flex justify-between items-center px-1">
@@ -852,10 +854,10 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
           {/* Bottom Row: Controls */}
           
-          <div className="flex justify-center items-center gap-8 relative w-full">
+          <div className="flex justify-center items-center gap-6 sm:gap-10 w-full">
              
              {/* Left side actions (Reactions & Shuffle) */}
-             <div className="flex items-center gap-4 absolute left-0">
+             <div className="flex items-center gap-4 sm:gap-6">
                <ReactionButton 
                  isOpen={reactionOpen} 
                  setIsOpen={setReactionOpen} 
@@ -872,7 +874,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
              </div>
 
              {/* Center play controls */}
-             <div className={`flex items-center gap-6 ${!isHost && !allowGuestControl ? 'opacity-40 pointer-events-none' : ''}`}>
+             <div className={`flex items-center gap-4 sm:gap-6 ${!isHost && !allowGuestControl ? 'opacity-40 pointer-events-none' : ''}`}>
                <button 
                  onClick={playPrevious}
                  disabled={(!isHost && !allowGuestControl) || history.length === 0}
@@ -904,7 +906,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
              </div>
 
              {/* Right side actions (Loop & Lyrics) */}
-             <div className="flex items-center gap-4 absolute right-0">
+             <div className="flex items-center gap-4 sm:gap-6">
                <button 
                  onClick={toggleLoop}
                  disabled={!isHost && !allowGuestControl}

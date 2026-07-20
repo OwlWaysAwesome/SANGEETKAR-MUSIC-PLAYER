@@ -105,7 +105,7 @@ export const ReactionButton: React.FC<{
         {REACTION_EMOJIS.map((emoji, i) => (
           <button
             key={emoji}
-            onClick={() => { sendReaction(emoji); setIsOpen(false); }}
+            onClick={() => sendReaction(emoji)}
             className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 active:scale-90 transition-all duration-150 text-xl hover:scale-125"
             style={{ animationDelay: `${i * 40}ms` }}
             title={emoji}
