@@ -705,7 +705,13 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
         {/* Top Header Area */}
         <header className="flex justify-between items-center w-full z-20 mb-6 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <h1 className="text-base text-white/90 font-playfair font-normal uppercase tracking-[0.2em]">SANGEETKAR</h1>
+            <h1 
+              onClick={() => navigate('/')}
+              className="text-base text-white/90 font-playfair font-normal uppercase tracking-[0.2em] hover:text-white transition-colors cursor-pointer"
+              title="Return to Lobby"
+            >
+              SANGEETKAR
+            </h1>
           </div>
           <div className="flex items-center gap-2">
             <div 
@@ -739,6 +745,31 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                 <line x1="15" y1="3" x2="15" y2="21"></line>
               </svg>
             </button>
+            {isHost ? (
+              <button
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to delete this room? This will disconnect everyone.')) {
+                    socket.emit('host:delete_room', { roomId });
+                    navigate('/');
+                  }
+                }}
+                className="px-3 py-1.5 rounded-full border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors flex items-center justify-center"
+                title="Delete Room"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  socket.emit('leave_room', { roomId });
+                  navigate('/');
+                }}
+                className="px-3 py-1.5 rounded-full border border-white/10 glass-panel hover:bg-white/10 transition-colors flex items-center justify-center text-white/60 hover:text-white"
+                title="Leave Room"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              </button>
+            )}
           </div>
         </header>
 

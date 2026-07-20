@@ -71,6 +71,11 @@ export class RoomManager {
     return room;
   }
 
+  deleteRoom(roomId: string) {
+    this.rooms.delete(roomId);
+  }
+
+
   getRoom(roomId: string): Room | undefined {
     return this.rooms.get(roomId);
   }

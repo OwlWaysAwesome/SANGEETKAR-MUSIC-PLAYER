@@ -832,6 +832,54 @@ io.on('connection', (socket: Socket) => {
     io.to(data.roomId).emit('room_state', roomManager.getRoom(data.roomId));
   });
 
+  // --- Room Management ---
+  socket.on('leave_room', (data: { roomId: string }) => {
+    if (!data.roomId) return;
+    const room = roomManager.getRoom(data.roomId);
+    if (!room) return;
+    
+    const leavingUser = room.users.find(u => u.id === socket.id || u.socketId === socket.id);
+    
+    roomManager.leaveRoom(data.roomId, socket.id);
+    socketRoomMap.delete(socket.id);
+    socket.leave(data.roomId);
+    
+    const updatedRoom = roomManager.getRoom(data.roomId);
+    if (updatedRoom) {
+      io.to(data.roomId).emit('room_state', updatedRoom);
+      if (leavingUser) {
+        io.to(data.roomId).emit('user:left', {
+          username: leavingUser.username || 'A listener',
+          avatar: leavingUser.avatar
+        });
+      }
+    }
+    console.log(`User ${socket.id} intentionally left room ${data.roomId}`);
+  });
+
+  socket.on('host:delete_room', (data: { roomId: string }) => {
+    if (!data.roomId) return;
+    const room = roomManager.getRoom(data.roomId);
+    if (!room) return;
+
+    let dbUserId = null;
+    const token = socket.handshake.auth?.token || null;
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+        dbUserId = decoded.userId;
+      } catch (e) {}
+    }
+    
+    const isHost = dbUserId === room.hostId || room.hostId === socket.id;
+    if (!isHost) return;
+
+    roomManager.deleteRoom(data.roomId);
+    io.to(data.roomId).emit('force_disconnect', { reason: 'room_deleted' });
+    io.in(data.roomId).socketsLeave(data.roomId);
+    console.log(`Host deleted room ${data.roomId}`);
+  });
+
   // --- Floating Reactions ---
   socket.on('reaction:send', (data: { roomId: string, emoji: string, username?: string }) => {
     if (!data.roomId || !data.emoji) return;
