@@ -481,6 +481,12 @@ io.on('connection', (socket: Socket) => {
 
     const room = roomManager.getRoom(roomId);
     if (room) {
+      if (room.status === 'playing') {
+        const now = Date.now();
+        const elapsed = (now - room.lastUpdatedServerTime) / 1000;
+        room.currentTimestamp += elapsed;
+        room.lastUpdatedServerTime = now;
+      }
       console.log('Evaluating Host for Socket:', socket.id, 'DB User:', dbUserId, 'Room Host:', room.hostId);
       io.to(roomId).emit('room_state', room);
     }

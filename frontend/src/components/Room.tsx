@@ -155,6 +155,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
   const videoIdRef = useRef(videoId);
   const isPlayingRef = useRef(isPlaying);
   const isTransitioningRef = useRef(false);
+  const initialSeekRef = useRef<number>(0);
 
   const executePlayNext = useCallback(() => {
     if (!isHostRef.current && !allowGuestControlRef.current) return;
@@ -178,6 +179,11 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
       if (audioRef.current.src !== newSrc) {
         audioRef.current.src = newSrc;
         audioRef.current.load();
+        if (initialSeekRef.current > 0) {
+          audioRef.current.currentTime = initialSeekRef.current;
+          setProgress(initialSeekRef.current);
+          initialSeekRef.current = 0;
+        }
         audioRef.current.play().catch(e => console.warn('[Jammer] Auto-play blocked:', e));
       }
     } else if (audioRef.current && !videoId) {
@@ -343,6 +349,14 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
       if (room.currentVideoId !== undefined) {
         setVideoId(room.currentVideoId);
         setThumbnailError(false);
+        if (room.currentTimestamp) {
+          initialSeekRef.current = room.currentTimestamp;
+          // Also set immediately if src is already correct (e.g., reconnect)
+          if (audioRef.current && audioRef.current.src.includes(room.currentVideoId)) {
+            audioRef.current.currentTime = room.currentTimestamp;
+            initialSeekRef.current = 0;
+          }
+        }
       }
       if (room.currentTrack !== undefined) {
         setCurrentTrack(room.currentTrack);
@@ -705,11 +719,11 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
   }, [thumbnailUrl]);
 
   return (
-    <div className="h-screen w-full flex flex-col md:flex-row bg-background relative overflow-hidden" style={{ '--theme-color': dominantColor } as React.CSSProperties}>
+    <div className="h-[100dvh] w-full flex flex-col md:flex-row bg-background relative overflow-hidden" style={{ '--theme-color': dominantColor } as React.CSSProperties}>
       <div className="ambient-mesh"></div>
 
       {/* Left Column (The Stage) - 70% */}
-      <section className={`flex-1 h-screen md:h-full flex flex-col relative p-4 md:p-6 lg:p-10 z-10 transition-all duration-300 ${isSidebarOpen ? 'lg:max-w-[70%]' : 'lg:max-w-full'}`}>
+      <section className={`flex-1 h-[100dvh] md:h-full flex flex-col relative p-4 md:p-6 lg:p-10 z-10 transition-all duration-300 ${isSidebarOpen ? 'lg:max-w-[70%]' : 'lg:max-w-full'}`}>
         
         {/* Top Header Area */}
         <header className="flex justify-between items-center w-full z-20 mb-6 flex-shrink-0">
@@ -724,7 +738,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
           </div>
           <div className="flex items-center gap-2">
             <div 
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 glass-panel cursor-pointer hover:bg-white/10 transition-colors" 
+              className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 glass-panel cursor-pointer hover:bg-white/10 transition-colors" 
               onClick={() => { navigator.clipboard.writeText(window.location.href); showToast('Room link copied!', 'info'); }} 
               title="Copy Room Link"
             >
@@ -740,9 +754,9 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                 {allowGuestControl ? <Shield className="w-3.5 h-3.5 text-emerald-400" /> : <ShieldOff className="w-3.5 h-3.5 text-white/40" />}
               </button>
             )}
-            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 glass-panel">
+            <div className="flex items-center gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-full border border-white/10 glass-panel">
               <span className={`w-2 h-2 rounded-full ${isHost ? 'bg-fuchsia-500' : 'bg-emerald-400'} animate-pulse`}></span>
-              <span className="text-[11px] text-white/60 uppercase tracking-widest font-medium">{isHost ? 'Host' : 'Listener'}</span>
+              <span className="hidden sm:inline text-[11px] text-white/60 uppercase tracking-widest font-medium">{isHost ? 'Host' : 'Listener'}</span>
             </div>
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}

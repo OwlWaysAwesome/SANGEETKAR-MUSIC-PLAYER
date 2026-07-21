@@ -80,6 +80,7 @@ export async function resolveTrackJIT(query: string, trackObj: any): Promise<any
 export async function parseSpotify(url: string): Promise<ParsedPlaylist> {
     const preview = await getPreview(url);
     const playlistTitle = preview.title || 'Spotify Playlist';
+    const playlistImage = preview.image || '';
     
     const tracksInfo = await getTracks(url);
     const limit = Math.min(tracksInfo.length, MAX_TRACKS);
@@ -91,7 +92,7 @@ export async function parseSpotify(url: string): Promise<ParsedPlaylist> {
             videoId: '',
             title: t.name,
             author: t.artists ? t.artists.map((a: any) => a.name).join(', ') : (t.artist || ''),
-            thumbnail: t.album?.images?.[0]?.url || t.coverArt?.sources?.[0]?.url || 'https://ui-avatars.com/api/?name=Track&background=1f1f1f&color=fff'
+            thumbnail: t.album?.images?.[0]?.url || t.coverArt?.sources?.[0]?.url || playlistImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1f1f1f&color=fff`
         });
     }
 
