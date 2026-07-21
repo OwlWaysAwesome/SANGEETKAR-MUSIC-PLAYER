@@ -10,7 +10,14 @@ import { Innertube } from 'youtubei.js';
 import { PrismaClient } from '@prisma/client';
 import { RoomManager } from './managers/RoomManager';
 import { SyncPlayCommand, SyncPauseCommand, SyncSeekCommand } from './models';
-import { parseSpotify, parseAppleMusic, parseYouTube } from './utils/importer';
+import { parseSpotify, parseAppleMusic, parseYouTube, resolveTrackJIT } from './utils/importer';
+async function ensureResolved(track: any) {
+  if (track && !track.videoId) {
+    const q = `${track.title} ${track.author} audio`;
+    await resolveTrackJIT(q, track);
+  }
+  return track;
+}
 
 // Initialize Prisma
 const prisma = new PrismaClient();
@@ -268,7 +275,7 @@ app.post('/api/playlists/import', async (req, res) => {
     })();
 
     const timeoutPromise = new Promise<any>((_, reject) =>
-      setTimeout(() => reject(new Error('TIMEOUT')), 15000)
+      setTimeout(() => reject(new Error('TIMEOUT')), 45000)
     );
 
     let parsed;
@@ -555,7 +562,7 @@ io.on('connection', (socket: Socket) => {
     io.to(data.roomId).emit('sync:seek', command);
   });
 
-  socket.on('host:queue_add', (data: { roomId: string, item: any }) => {
+  socket.on('host:queue_add', async (data: { roomId: string, item: any }) => {
     console.log(`[host:queue_add] Received for room ${data.roomId}, track: ${data.item?.title}`);
 
     // Ensure the room exists (handles race condition after server restart)
@@ -571,6 +578,7 @@ io.on('connection', (socket: Socket) => {
     // Auto-play: if nothing is currently playing, pop first track and start it
     if (!room.currentVideoId && room.queue.length > 0) {
       const firstTrack = room.queue.shift()!;
+      await ensureResolved(firstTrack);
       room.currentVideoId = firstTrack.videoId;
       room.currentTrack = firstTrack;
       room.status = 'playing';
@@ -591,7 +599,7 @@ io.on('connection', (socket: Socket) => {
     io.to(data.roomId).emit('queue_updated', room.queue);
   });
 
-  socket.on('host:queue_add_bulk', (data: { roomId: string, items: any[] }) => {
+  socket.on('host:queue_add_bulk', async (data: { roomId: string, items: any[] }) => {
     console.log(`[host:queue_add_bulk] Received for room ${data.roomId}, ${data.items?.length ?? 0} tracks`);
 
     if (!data.items || data.items.length === 0) {
@@ -613,6 +621,7 @@ io.on('connection', (socket: Socket) => {
     // Auto-play: if nothing is currently playing, pop first track and start it
     if (!room.currentVideoId && room.queue.length > 0) {
       const firstTrack = room.queue.shift()!;
+      await ensureResolved(firstTrack);
       room.currentVideoId = firstTrack.videoId;
       room.currentTrack = firstTrack;
       room.status = 'playing';
@@ -635,7 +644,7 @@ io.on('connection', (socket: Socket) => {
     io.to(data.roomId).emit('queue_updated', room.queue);
   });
 
-  socket.on('host:play_next', (data: { roomId: string }) => {
+  socket.on('host:play_next', async (data: { roomId: string }) => {
     console.log('[host:play_next] Received for room ' + data.roomId);
     const room = roomManager.getRoom(data.roomId);
     if (!room) return;
@@ -662,6 +671,7 @@ io.on('connection', (socket: Socket) => {
     }
 
     if (nextItem) {
+      await ensureResolved(nextItem);
       roomManager.updateRoomState(data.roomId, {
         currentVideoId: nextItem.videoId,
         currentTrack: nextItem,
@@ -678,7 +688,7 @@ io.on('connection', (socket: Socket) => {
     }
   });
 
-  socket.on('host:play_previous', (data: { roomId: string }) => {
+  socket.on('host:play_previous', async (data: { roomId: string }) => {
     const room = roomManager.getRoom(data.roomId);
     if (!room) return;
     if (!checkControlPermission(room, socket.id)) return;
@@ -690,6 +700,7 @@ io.on('connection', (socket: Socket) => {
     }
 
     const prevTrack = room.history.pop()!;
+    await ensureResolved(prevTrack);
     roomManager.updateRoomState(data.roomId, {
       currentVideoId: prevTrack.videoId,
       currentTrack: prevTrack,
@@ -709,10 +720,12 @@ io.on('connection', (socket: Socket) => {
     io.to(data.roomId).emit('sync:play', command);
   });
 
-  socket.on('host:play_track', (data: { roomId: string, track: any, timestamp: number }) => {
+  socket.on('host:play_track', async (data: { roomId: string, track: any, timestamp: number }) => {
     const room = roomManager.getRoom(data.roomId);
     if (!room) return;
     if (!checkControlPermission(room, socket.id)) return;
+
+    await ensureResolved(data.track);
 
     if (room.currentTrack && room.currentTrack.videoId !== data.track.videoId) {
       room.history.push(room.currentTrack);
@@ -749,6 +762,26 @@ io.on('connection', (socket: Socket) => {
 
     room.queue = data.newQueue;
     io.to(data.roomId).emit('queue_updated', room.queue);
+  });
+
+  socket.on('host:queue_clear', (data: { roomId: string }) => {
+    const room = roomManager.getRoom(data.roomId);
+    if (!room) return;
+    if (!checkControlPermission(room, socket.id)) return;
+
+    room.queue = [];
+    io.to(data.roomId).emit('queue_updated', room.queue);
+  });
+
+  socket.on('host:queue_remove', (data: { roomId: string, index: number }) => {
+    const room = roomManager.getRoom(data.roomId);
+    if (!room) return;
+    if (!checkControlPermission(room, socket.id)) return;
+
+    if (data.index >= 0 && data.index < room.queue.length) {
+      room.queue.splice(data.index, 1);
+      io.to(data.roomId).emit('queue_updated', room.queue);
+    }
   });
 
   socket.on('host:kick_user', (data: { roomId: string, targetSocketId: string }) => {

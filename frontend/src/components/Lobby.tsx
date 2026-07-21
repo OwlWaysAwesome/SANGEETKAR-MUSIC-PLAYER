@@ -44,7 +44,7 @@ const Lobby: React.FC = () => {
       <div className="ambient-mesh"></div>
 
       {/* Main Card */}
-      <div className="relative z-10 w-full max-w-[448px] bg-[#111115]/60 backdrop-blur-[24px] border border-white/5 rounded-xl px-12 py-10 shadow-2xl flex flex-col items-center">
+      <div className="relative z-10 w-[90%] md:w-full max-w-[448px] bg-[#111115]/60 backdrop-blur-[24px] border border-white/5 rounded-xl px-6 md:px-12 py-8 md:py-10 shadow-2xl flex flex-col items-center">
         
         {/* Header */}
         <h1 className="text-white text-[16px] tracking-[0.35em] uppercase mb-10 text-center font-playfair font-normal">

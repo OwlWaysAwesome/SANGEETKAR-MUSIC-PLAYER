@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { socket, getServerTime } from '../lib/socket';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Play, Disc3, Search, Plus, ListMusic, Trash2, Volume2, GripVertical, Link, Loader2, Repeat, Shuffle, Shield, ShieldOff, Mic2 } from 'lucide-react';
+import { Play, Disc3, Search, Plus, ListMusic, Trash2, Volume2, GripVertical, Link, Loader2, Repeat, Shuffle, Shield, ShieldOff, Mic2, Menu, X } from 'lucide-react';
 import { FastAverageColor } from 'fast-average-color';
 import { BACKEND_URL } from '../config';
 import { useToast } from './Toast';
@@ -38,7 +38,7 @@ interface SearchResult {
   thumbnail: string;
 }
 
-function SortableQueueItem({ item, isHost, onPlay }: any) {
+function SortableQueueItem({ item, isHost, onPlay, onRemove }: any) {
   const {
     attributes,
     listeners,
@@ -79,13 +79,22 @@ function SortableQueueItem({ item, isHost, onPlay }: any) {
         <p className="text-[11px] text-white/40 truncate mt-0.5">{item.author}</p>
       </div>
       {isHost && (
-        <div 
-          className="text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing p-1.5 -mr-1 flex-shrink-0 transition-colors"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
+        <>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="text-white/30 hover:text-red-400 p-1.5 transition-colors opacity-0 group-hover:opacity-100"
+            title="Remove from queue"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <div 
+            className="text-white/15 hover:text-white/40 cursor-grab active:cursor-grabbing p-1.5 -mr-1 flex-shrink-0 transition-colors"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="w-4 h-4" />
+          </div>
+        </>
       )}
     </div>
   );
@@ -700,7 +709,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
       <div className="ambient-mesh"></div>
 
       {/* Left Column (The Stage) - 70% */}
-      <section className={`flex-1 h-screen md:h-full flex flex-col relative p-6 md:p-10 z-10 transition-all duration-300 ${isSidebarOpen ? 'lg:max-w-[70%]' : 'lg:max-w-full'}`}>
+      <section className={`flex-1 h-screen md:h-full flex flex-col relative p-4 md:p-6 lg:p-10 z-10 transition-all duration-300 ${isSidebarOpen ? 'lg:max-w-[70%]' : 'lg:max-w-full'}`}>
         
         {/* Top Header Area */}
         <header className="flex justify-between items-center w-full z-20 mb-6 flex-shrink-0">
@@ -737,10 +746,11 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
             </div>
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="px-3.5 py-1.5 rounded-full border border-white/10 glass-panel hover:bg-white/10 transition-colors hidden lg:flex items-center justify-center text-white/60 hover:text-white"
-              title="Toggle Sidebar"
+              className="px-3 md:px-3.5 py-1.5 rounded-full border border-white/10 glass-panel hover:bg-white/10 transition-colors flex items-center justify-center text-white/60 hover:text-white"
+              title="Toggle Menu"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <Menu className="w-4 h-4 md:hidden" />
+              <svg className="hidden md:block w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="15" y1="3" x2="15" y2="21"></line>
               </svg>
@@ -785,7 +795,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
             className={`relative w-full max-w-md mx-auto aspect-square group transition-all duration-700 transform-style-3d ${showLyrics ? 'rotate-y-180' : ''}`}
           >
             {/* FRONT FACE (Album Art) */}
-            <div className={`absolute inset-0 backface-hidden ${isHost && !showLyrics ? 'cursor-pointer' : ''}`} onClick={isHost && !showLyrics ? togglePlay : undefined}>
+            <div className={`absolute inset-0 backface-hidden ${(isHost || allowGuestControl) && !showLyrics ? 'cursor-pointer' : ''}`} onClick={(isHost || allowGuestControl) && !showLyrics ? togglePlay : undefined}>
               <div className="media-glow"></div>
               {thumbnailUrl ? (
                 <img 
@@ -961,10 +971,17 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
       {/* Right Column: The Sidebar (30%) */}
       {isSidebarOpen && (
-        <section className="w-full md:w-[30%] h-[50vh] md:h-screen glass-panel border-t md:border-t-0 md:border-l border-white/5 flex flex-col z-20 animate-in fade-in slide-in-from-right-4 duration-300">
+        <section className={`absolute inset-0 w-full h-[100dvh] md:relative md:w-[30%] md:h-screen glass-panel border-t md:border-t-0 md:border-l border-white/5 flex flex-col z-[100] animate-in fade-in slide-in-from-right-4 duration-300 bg-[#111115] md:bg-transparent`}>
+          {/* Mobile Close Button */}
+          <div className="md:hidden flex items-center justify-between p-4 border-b border-white/5 flex-shrink-0 bg-black/20">
+            <h2 className="text-sm font-semibold tracking-widest uppercase text-white/90">Menu</h2>
+            <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         
         {/* Search Bar */}
-        {isHost && (
+        {(isHost || allowGuestControl) && (
           <div className="p-4 border-b border-white/5 relative flex flex-col gap-3 flex-shrink-0">
             {/* Search */}
             <div className="relative w-full">
@@ -1086,6 +1103,14 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                       {queue.length > 0 && (
                         <div className="px-4 py-2 bg-black/40 border-b border-white/5 text-[10px] tracking-widest uppercase text-white/40 font-medium flex items-center justify-between">
                           <span>Up Next</span>
+                          {(isHost || allowGuestControl) && (
+                            <button 
+                              onClick={() => socket.emit('host:queue_clear', { roomId })}
+                              className="text-red-400 hover:text-red-300 transition-colors capitalize"
+                            >
+                              Clear Queue
+                            </button>
+                          )}
                         </div>
                       )}
                     </>
@@ -1105,8 +1130,9 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                           key={item.id || item.videoId} 
                           item={item} 
                           index={index} 
-                          isHost={isHost} 
+                          isHost={isHost || allowGuestControl} 
                           onPlay={() => playTrackImmediate(item)} 
+                          onRemove={() => socket.emit('host:queue_remove', { roomId, index })}
                         />
                       ))}
                     </SortableContext>
@@ -1225,7 +1251,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                           <p className="text-white/40 text-[11px] truncate mt-0.5">{tracks.length} tracks</p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {isHost && (
+                          {(isHost || allowGuestControl) && (
                             <button 
                               onClick={() => addPlaylistToQueueBulk(pl)}
                               className="text-primary hover:bg-white/10 p-2 rounded-full transition-all flex items-center justify-center"
@@ -1254,7 +1280,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                                 <p className="text-white/80 text-xs font-medium truncate">{track.title}</p>
                                 <p className="text-white/40 text-[10px] truncate">{track.author}</p>
                               </div>
-                              {isHost && (
+                              {(isHost || allowGuestControl) && (
                                 <button 
                                   onClick={() => socket.emit('host:queue_add', { roomId, item: track })}
                                   className="text-primary opacity-0 group-hover/track:opacity-100 hover:bg-white/10 p-1.5 rounded-full transition-all"

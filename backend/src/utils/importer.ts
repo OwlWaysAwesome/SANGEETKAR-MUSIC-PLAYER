@@ -23,7 +23,7 @@ export interface ParsedPlaylist {
     tracks: ResolvedTrack[];
 }
 
-const MAX_TRACKS = 25;
+const MAX_TRACKS = 100;
 
 /**
  * Helper to resolve text queries to YouTube videos.
@@ -32,26 +32,49 @@ async function resolveTracksToYouTube(queries: TrackMetadata[]): Promise<Resolve
     const limit = Math.min(queries.length, MAX_TRACKS);
     const resolved: ResolvedTrack[] = [];
     
-    // Process in sequential chunks to avoid being rate limited, or just use Promise.all with small arrays
-    for (let i = 0; i < limit; i++) {
-        const query = `${queries[i].title} ${queries[i].artist} audio`;
-        try {
-            const r = await ytSearch(query);
-            if (r.videos && r.videos.length > 0) {
-                const v = r.videos[0];
-                resolved.push({
-                    videoId: v.videoId,
-                    title: v.title,
-                    author: v.author.name,
-                    thumbnail: v.thumbnail || ''
-                });
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < limit; i += CHUNK_SIZE) {
+        const chunk = queries.slice(i, i + CHUNK_SIZE);
+        const promises = chunk.map(async (q) => {
+            const query = `${q.title} ${q.artist} audio`;
+            try {
+                const r = await ytSearch(query);
+                if (r.videos && r.videos.length > 0) {
+                    const v = r.videos[0];
+                    return {
+                        videoId: v.videoId,
+                        title: v.title,
+                        author: v.author.name,
+                        thumbnail: v.thumbnail || ''
+                    };
+                }
+            } catch (e) {
+                console.error('Failed to resolve track:', query, e);
             }
-        } catch (e) {
-            console.error('Failed to resolve track:', query, e);
+            return null;
+        });
+
+        const results = await Promise.all(promises);
+        for (const res of results) {
+            if (res) resolved.push(res);
         }
     }
     
     return resolved;
+}
+
+export async function resolveTrackJIT(query: string, trackObj: any): Promise<any> {
+    try {
+        const r = await ytSearch(query);
+        if (r.videos && r.videos.length > 0) {
+            const v = r.videos[0];
+            trackObj.videoId = v.videoId;
+            trackObj.thumbnail = v.thumbnail || trackObj.thumbnail || '';
+        }
+    } catch (e) {
+        console.error('Failed JIT resolve:', query, e);
+    }
+    return trackObj;
 }
 
 export async function parseSpotify(url: string): Promise<ParsedPlaylist> {
@@ -59,12 +82,19 @@ export async function parseSpotify(url: string): Promise<ParsedPlaylist> {
     const playlistTitle = preview.title || 'Spotify Playlist';
     
     const tracksInfo = await getTracks(url);
-    const tracks: TrackMetadata[] = tracksInfo.map((t: any) => ({
-        title: t.name,
-        artist: t.artists ? t.artists.map((a: any) => a.name).join(', ') : (t.artist || '')
-    }));
+    const limit = Math.min(tracksInfo.length, MAX_TRACKS);
+    
+    const resolved: ResolvedTrack[] = [];
+    for (let i = 0; i < limit; i++) {
+        const t = tracksInfo[i];
+        resolved.push({
+            videoId: '',
+            title: t.name,
+            author: t.artists ? t.artists.map((a: any) => a.name).join(', ') : (t.artist || ''),
+            thumbnail: t.album?.images?.[0]?.url || t.coverArt?.sources?.[0]?.url || 'https://ui-avatars.com/api/?name=Track&background=1f1f1f&color=fff'
+        });
+    }
 
-    const resolved = await resolveTracksToYouTube(tracks);
     return {
         title: playlistTitle,
         tracks: resolved
@@ -101,7 +131,17 @@ export async function parseAppleMusic(url: string): Promise<ParsedPlaylist> {
         });
     }
 
-    const resolved = await resolveTracksToYouTube(tracks);
+    const limit = Math.min(tracks.length, MAX_TRACKS);
+    const resolved: ResolvedTrack[] = [];
+    for (let i = 0; i < limit; i++) {
+        resolved.push({
+            videoId: '',
+            title: tracks[i].title,
+            author: tracks[i].artist,
+            thumbnail: 'https://ui-avatars.com/api/?name=Track&background=1f1f1f&color=fff' // Apple music doesn't provide easy thumbnails via HTML meta mostly
+        });
+    }
+
     return {
         title: playlistTitle,
         tracks: resolved
