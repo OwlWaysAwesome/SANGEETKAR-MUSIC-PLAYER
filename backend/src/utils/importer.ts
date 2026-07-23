@@ -192,7 +192,7 @@ export async function parseYouTube(url: string): Promise<ParsedPlaylist> {
                 } catch(e) {}
                 
                 try {
-                    author = item.author?.name || item.author || item.artists?.[0]?.name || item.artists || 'Unknown Author';
+                    author = item.author?.name || item.author || item.authors?.[0]?.name || item.artists?.[0]?.name || item.artists || 'Unknown Author';
                 } catch (e) {}
 
                 resolved.push({

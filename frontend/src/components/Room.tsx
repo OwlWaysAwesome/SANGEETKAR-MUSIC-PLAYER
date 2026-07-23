@@ -179,11 +179,6 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
       if (audioRef.current.src !== newSrc) {
         audioRef.current.src = newSrc;
         audioRef.current.load();
-        if (initialSeekRef.current > 0) {
-          audioRef.current.currentTime = initialSeekRef.current;
-          setProgress(initialSeekRef.current);
-          initialSeekRef.current = 0;
-        }
         audioRef.current.play().catch(e => console.warn('[Jammer] Auto-play blocked:', e));
       }
     } else if (audioRef.current && !videoId) {
@@ -225,16 +220,26 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
       }
     };
 
+    const onLoadedMetadata = () => {
+      if (initialSeekRef.current > 0) {
+        audio.currentTime = initialSeekRef.current;
+        setProgress(initialSeekRef.current);
+        initialSeekRef.current = 0;
+      }
+    };
+
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('error', onError);
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
 
     return () => {
       audio.removeEventListener('play', onPlay);
       audio.removeEventListener('pause', onPause);
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('error', onError);
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
     };
   }, [playNext]);
 
@@ -719,14 +724,14 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
   }, [thumbnailUrl]);
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col md:flex-row bg-background relative overflow-hidden" style={{ '--theme-color': dominantColor } as React.CSSProperties}>
+    <div className={`h-[100dvh] w-full flex bg-background relative overflow-hidden ${isSidebarOpen ? 'flex-col-reverse md:flex-row' : 'flex-col md:flex-row'}`} style={{ '--theme-color': dominantColor } as React.CSSProperties}>
       <div className="ambient-mesh"></div>
 
       {/* Left Column (The Stage) - 70% */}
-      <section className={`flex-1 h-[100dvh] md:h-full flex flex-col relative p-4 md:p-6 lg:p-10 z-10 transition-all duration-300 ${isSidebarOpen ? 'lg:max-w-[70%]' : 'lg:max-w-full'}`}>
+      <section className={`flex flex-col relative p-4 md:p-6 lg:p-10 z-10 transition-all duration-300 ${isSidebarOpen ? 'flex-shrink-0 md:flex-1 md:h-full lg:max-w-[70%]' : 'flex-1 h-[100dvh] lg:max-w-full'}`}>
         
         {/* Top Header Area */}
-        <header className="flex justify-between items-center w-full z-20 mb-6 flex-shrink-0">
+        <header className={`justify-between items-center w-full z-20 mb-6 flex-shrink-0 ${isSidebarOpen ? 'hidden md:flex' : 'flex'}`}>
           <div className="flex items-center gap-3">
             <h1 
               onClick={() => navigate('/')}
@@ -804,7 +809,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
         <ReactionOverlay reactions={reactions} />
 
         {/* Center: Album Artwork Display & Lyrics Flip Card */}
-        <div className="flex-grow flex items-center justify-center relative w-full mb-6 z-10 min-h-0 perspective-1000">
+        <div className={`flex-grow items-center justify-center relative w-full mb-6 z-10 min-h-0 perspective-1000 ${isSidebarOpen ? 'hidden md:flex' : 'flex'}`}>
           <div 
             className={`relative w-full max-w-md mx-auto aspect-square group transition-all duration-700 transform-style-3d ${showLyrics ? 'rotate-y-180' : ''}`}
           >
@@ -985,7 +990,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
       {/* Right Column: The Sidebar (30%) */}
       {isSidebarOpen && (
-        <section className={`absolute inset-0 w-full h-[100dvh] md:relative md:w-[30%] md:h-screen glass-panel border-t md:border-t-0 md:border-l border-white/5 flex flex-col z-[100] animate-in fade-in slide-in-from-right-4 duration-300 bg-[#111115] md:bg-transparent`}>
+        <section className={`w-full md:relative md:w-[30%] glass-panel border-t md:border-t-0 md:border-l border-white/5 flex flex-col z-50 bg-background md:bg-transparent animate-in fade-in slide-in-from-right-4 duration-300 ${isSidebarOpen ? 'flex-1 h-0 md:h-screen' : 'h-[100dvh]'}`}>
           {/* Mobile Close Button */}
           <div className="md:hidden flex items-center justify-between p-4 border-b border-white/5 flex-shrink-0 bg-black/20">
             <h2 className="text-sm font-semibold tracking-widest uppercase text-white/90">Menu</h2>
