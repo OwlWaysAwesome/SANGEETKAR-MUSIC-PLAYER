@@ -502,6 +502,19 @@ io.on('connection', (socket: Socket) => {
     console.log(`[join_room] Socket ${socket.id} (DB User: ${dbUserId || 'None'}) successfully joined ${roomId} as ${user.isHost ? 'Host' : 'Listener'}`);
   });
 
+  socket.on('request_sync', (data: { roomId: string }) => {
+    const room = roomManager.getRoom(data.roomId);
+    if (room) {
+      if (room.status === 'playing') {
+        const now = Date.now();
+        const elapsed = (now - room.lastUpdatedServerTime) / 1000;
+        room.currentTimestamp += elapsed;
+        room.lastUpdatedServerTime = now;
+      }
+      socket.emit('room_state', room);
+    }
+  });
+
   socket.on('disconnect', () => {
     const roomId = socketRoomMap.get(socket.id);
     if (roomId) {

@@ -694,8 +694,12 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
     if (isPlayingRef.current) {
       socket.emit('host:pause', { roomId, timestamp });
     } else {
-      const currentVid = videoIdRef.current;
-      socket.emit('host:play', { roomId, videoId: currentVid, timestamp });
+      if (roomStatusRef.current === 'playing') {
+        socket.emit('request_sync', { roomId });
+      } else {
+        const currentVid = videoIdRef.current;
+        socket.emit('host:play', { roomId, videoId: currentVid, timestamp });
+      }
     }
   };
 
@@ -882,17 +886,17 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                 </div>
               )}
 
-              {/* Autoplay blocked overlay */}
-              {playBlocked && (
+              {/* Sync overlay when locally paused but room is playing */}
+              {(!isPlaying && roomStatusRef.current === 'playing') && (
                 <div 
                   className="absolute inset-0 flex flex-col items-center justify-center z-30 bg-black/80 backdrop-blur-md rounded-2xl cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (audioRef.current) {
                       audioRef.current.play()
-                        .then(() => setPlayBlocked(false))
                         .catch(err => console.error("[Jammer] Still blocked:", err));
                     }
+                    socket.emit('request_sync', { roomId });
                   }}
                 >
                   <Play className="w-16 h-16 text-primary fill-current mb-4 animate-pulse" />
