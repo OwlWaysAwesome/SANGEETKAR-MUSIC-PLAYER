@@ -187,8 +187,9 @@ app.get('/api/stream/:videoId', async (req, res) => {
       // Use yt-dlp to extract the direct audio stream URL and required headers
       const { execSync } = require('child_process');
       const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const browser = process.env.YT_COOKIES_BROWSER || 'chrome';
       const result = execSync(
-        `yt-dlp -f bestaudio -j --no-warnings "${ytUrl}"`,
+        `yt-dlp -f bestaudio -j --cookies-from-browser ${browser} --no-warnings "${ytUrl}"`,
         { encoding: 'utf-8', timeout: 30000, maxBuffer: 10 * 1024 * 1024 }
       ).trim();
 
