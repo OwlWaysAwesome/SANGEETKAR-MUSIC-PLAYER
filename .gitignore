@@ -8,3 +8,4 @@ backend/prisma/*.db
 backend/prisma/*.db-journal
 frontend/node_modules/
 frontend/dist/
+frontend/mock/

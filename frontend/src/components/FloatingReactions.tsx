@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { socket } from '../lib/socket';
+import { Smile } from 'lucide-react';
 
 interface FloatingReaction {
   id: string;
@@ -85,18 +86,13 @@ export const ReactionButton: React.FC<{
   sendReaction: (emoji: string) => void;
   popoverRef: React.RefObject<HTMLDivElement | null>;
 }> = ({ isOpen, setIsOpen, sendReaction, popoverRef }) => (
-  <div className="relative" ref={popoverRef}>
+  <div className="relative flex items-center justify-center" ref={popoverRef}>
     <button
       onClick={() => setIsOpen(!isOpen)}
-      className={`transition-colors ${isOpen ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
+      className={`transition-colors flex items-center justify-center ${isOpen ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
       title="Reactions"
     >
-      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-        <line x1="9" y1="9" x2="9.01" y2="9" />
-        <line x1="15" y1="9" x2="15.01" y2="9" />
-      </svg>
+      <Smile className="w-5 h-5 sm:w-6 sm:h-6" />
     </button>
 
     {/* Vertical emoji popover */}

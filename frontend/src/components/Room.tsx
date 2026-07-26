@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { socket, getServerTime } from '../lib/socket';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Play, Disc3, Search, Plus, ListMusic, Trash2, Volume2, GripVertical, Link, Loader2, Repeat, Shuffle, Shield, ShieldOff, Mic2, Menu, X } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Disc3, Search, Plus, ListMusic, Trash2, Volume2, GripVertical, Link, Loader2, Repeat, Shuffle, Shield, ShieldOff, Mic2, Menu, X } from 'lucide-react';
 import { FastAverageColor } from 'fast-average-color';
 import { BACKEND_URL } from '../config';
 import { useToast } from './Toast';
@@ -133,6 +133,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
   const [thumbnailError, setThumbnailError] = useState(false);
   const [dominantColor, setDominantColor] = useState('#a855f7');
   const [showLyrics, setShowLyrics] = useState(false);
+  const [playBlocked, setPlayBlocked] = useState(false);
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -179,7 +180,12 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
       if (audioRef.current.src !== newSrc) {
         audioRef.current.src = newSrc;
         audioRef.current.load();
-        audioRef.current.play().catch(e => console.warn('[Jammer] Auto-play blocked:', e));
+        audioRef.current.play()
+          .then(() => setPlayBlocked(false))
+          .catch(e => {
+            console.warn('[Jammer] Auto-play blocked:', e);
+            setPlayBlocked(true);
+          });
       }
     } else if (audioRef.current && !videoId) {
       audioRef.current.pause();
@@ -358,8 +364,21 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
           initialSeekRef.current = room.currentTimestamp;
           // Also set immediately if src is already correct (e.g., reconnect)
           if (audioRef.current && audioRef.current.src.includes(room.currentVideoId)) {
-            audioRef.current.currentTime = room.currentTimestamp;
+            if (Math.abs(audioRef.current.currentTime - room.currentTimestamp) > 2) {
+              audioRef.current.currentTime = room.currentTimestamp;
+            }
             initialSeekRef.current = 0;
+            
+            if (room.status === 'playing') {
+              audioRef.current.play()
+                .then(() => setPlayBlocked(false))
+                .catch(e => {
+                  console.warn('[Jammer] Play blocked on room_state:', e);
+                  setPlayBlocked(true);
+                });
+            } else {
+              audioRef.current.pause();
+            }
           }
         }
       }
@@ -404,7 +423,12 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
           if (data.videoId === videoIdRef.current && audioRef.current.src.includes(data.videoId)) {
             audioRef.current.currentTime = data.timestamp;
           }
-          audioRef.current.play().catch(e => console.warn('[Jammer] Play blocked:', e));
+          audioRef.current.play()
+            .then(() => setPlayBlocked(false))
+            .catch(e => {
+              console.warn('[Jammer] Play blocked:', e);
+              setPlayBlocked(true);
+            });
         }
       };
 
@@ -793,7 +817,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                   socket.emit('leave_room', { roomId });
                   navigate('/');
                 }}
-                className="px-3 py-1.5 rounded-full border border-white/10 glass-panel hover:bg-white/10 transition-colors flex items-center justify-center text-white/60 hover:text-white"
+                className="px-3 py-1.5 rounded-full border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors flex items-center justify-center"
                 title="Leave Room"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
@@ -809,9 +833,9 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
         <ReactionOverlay reactions={reactions} />
 
         {/* Center: Album Artwork Display & Lyrics Flip Card */}
-        <div className={`flex-grow items-center justify-center relative w-full mb-6 z-10 min-h-0 perspective-1000 ${isSidebarOpen ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`flex-grow items-center justify-center relative w-full mb-4 sm:mb-6 z-10 min-h-0 perspective-1000 ${isSidebarOpen ? 'hidden md:flex' : 'flex'}`}>
           <div 
-            className={`relative w-full max-w-md mx-auto aspect-square group transition-all duration-700 transform-style-3d ${showLyrics ? 'rotate-y-180' : ''}`}
+            className={`relative w-full max-w-[280px] sm:max-w-md mx-auto aspect-square group transition-all duration-700 transform-style-3d ${showLyrics ? 'rotate-y-180' : ''}`}
           >
             {/* FRONT FACE (Album Art) */}
             <div className={`absolute inset-0 backface-hidden ${(isHost || allowGuestControl) && !showLyrics ? 'cursor-pointer' : ''}`} onClick={(isHost || allowGuestControl) && !showLyrics ? togglePlay : undefined}>
@@ -839,6 +863,25 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                   </div>
                 </div>
               )}
+
+              {/* Autoplay blocked overlay */}
+              {playBlocked && (
+                <div 
+                  className="absolute inset-0 flex flex-col items-center justify-center z-30 bg-black/80 backdrop-blur-md rounded-2xl cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (audioRef.current) {
+                      audioRef.current.play()
+                        .then(() => setPlayBlocked(false))
+                        .catch(err => console.error("[Jammer] Still blocked:", err));
+                    }
+                  }}
+                >
+                  <Play className="w-16 h-16 text-primary fill-current mb-4 animate-pulse" />
+                  <span className="text-white font-bold text-lg">Tap to Sync Audio</span>
+                  <span className="text-white/60 text-sm mt-2">Browser autoplay blocked</span>
+                </div>
+              )}
             </div>
 
             {/* BACK FACE (Lyrics) */}
@@ -850,7 +893,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
         </div>
 
         {/* Bottom: Media Control Bar */}
-        <footer className="glass-panel rounded-2xl p-5 flex flex-col gap-5 flex-shrink-0 relative group/footer z-20 w-full max-w-3xl mx-auto">
+        <footer className="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col gap-4 sm:gap-5 flex-shrink-0 relative group/footer z-20 w-full max-w-3xl mx-auto">
           {/* Hover gradient effect */}
           <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent opacity-0 group-hover/footer:opacity-100 transition-opacity duration-1000 -translate-x-full group-hover/footer:translate-x-full ease-in-out"></div>
@@ -869,13 +912,12 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
             
             <div className="flex items-center gap-4">
               {!isHost && (
-                <div className="flex gap-2 items-center bg-white/5 px-3 py-1 rounded-full border border-white/10 mr-2">
-
+                <div className="hidden sm:flex gap-2 items-center bg-white/5 px-3 py-1 rounded-full border border-white/10 mr-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                   <span className="text-[10px] uppercase tracking-wider text-white/50">Synced</span>
                 </div>
               )}
-              <div className="flex items-center gap-2 group relative">
+              <div className="hidden sm:flex items-center gap-2 group relative">
                 <Volume2 className="text-white/30 hover:text-white/70 transition-colors cursor-pointer w-5 h-5" />
                 <input 
                   type="range" min="0" max="100" value={volume} onChange={handleVolumeChange}
@@ -904,7 +946,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                />
                <div className="absolute top-0 left-0 h-full rounded-full pointer-events-none"
                     style={{ 
-                      width: `${(progress / (duration || 1)) * 100}%`,
+                      width: `${Math.min(100, Math.max(0, (progress / (duration || 100)) * 100))}%`,
                       background: 'linear-gradient(90deg, var(--theme-color, #3626ce) 0%, rgba(255,255,255,0.8) 100%)' 
                     }}>
                </div>
@@ -914,10 +956,10 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
           {/* Bottom Row: Controls */}
           
-          <div className="flex justify-center items-center gap-6 sm:gap-10 w-full">
+          <div className="flex items-center w-full px-1 sm:px-0 sm:justify-center sm:gap-10">
              
              {/* Left side actions (Reactions & Shuffle) */}
-             <div className="flex items-center gap-4 sm:gap-6">
+             <div className="flex flex-1 sm:flex-none justify-start items-center gap-5 sm:gap-6">
                <ReactionButton 
                  isOpen={reactionOpen} 
                  setIsOpen={setReactionOpen} 
@@ -929,29 +971,29 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                  disabled={!isHost && !allowGuestControl}
                  className={`transition-colors ${isShuffle ? 'text-primary' : 'text-on-surface-variant hover:text-primary'} disabled:opacity-30 disabled:hover:text-on-surface-variant`}
                >
-                 <Shuffle className="w-6 h-6" />
+                 <Shuffle className="w-5 h-5 sm:w-6 sm:h-6" />
                </button>
              </div>
 
              {/* Center play controls */}
-             <div className={`flex items-center gap-4 sm:gap-6 ${!isHost && !allowGuestControl ? 'opacity-40 pointer-events-none' : ''}`}>
+             <div className={`flex items-center justify-center flex-shrink-0 gap-3 sm:gap-6 mx-auto sm:mx-0 ${!isHost && !allowGuestControl ? 'opacity-40 pointer-events-none' : ''}`}>
                <button 
                  onClick={playPrevious}
                  disabled={(!isHost && !allowGuestControl) || history.length === 0}
                className="text-on-surface-variant hover:text-primary transition-colors disabled:opacity-30 disabled:hover:text-on-surface-variant"
              >
-               <span className="material-symbols-outlined text-3xl"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg></span>
+               <SkipBack className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
              </button>
 
              <button 
                onClick={togglePlay}
                disabled={!videoId || (!isHost && !allowGuestControl)}
-               className="w-16 h-16 flex-shrink-0 rounded-full bg-primary text-background flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.4)] hover:shadow-[0_0_30px_rgba(255,255,255,0.6)] hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:hover:scale-100 disabled:shadow-none"
+               className="w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 rounded-full bg-primary text-background flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.4)] hover:shadow-[0_0_30px_rgba(255,255,255,0.6)] hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:hover:scale-100 disabled:shadow-none"
              >
                {isPlaying ? (
-                 <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                 <Pause className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
                ) : (
-                 <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" className="ml-1"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                 <Play className="w-6 h-6 sm:w-7 sm:h-7 fill-current ml-1" />
                )}
              </button>
 
@@ -960,19 +1002,18 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                disabled={(!isHost && !allowGuestControl) || (!currentTrack && queue.length === 0)}
                className="text-on-surface-variant hover:text-primary transition-colors disabled:opacity-30 disabled:hover:text-on-surface-variant"
              >
-               <span className="material-symbols-outlined text-3xl"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg></span>
+               <SkipForward className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
              </button>
-
              </div>
 
              {/* Right side actions (Loop & Lyrics) */}
-             <div className="flex items-center gap-4 sm:gap-6">
+             <div className="flex flex-1 sm:flex-none justify-end items-center gap-5 sm:gap-6">
                <button 
                  onClick={toggleLoop}
                  disabled={!isHost && !allowGuestControl}
                  className={`relative transition-colors ${loopMode !== 'off' ? 'text-primary' : 'text-on-surface-variant hover:text-primary'} disabled:opacity-30 disabled:hover:text-on-surface-variant`}
                >
-                 <Repeat className="w-6 h-6" />
+                 <Repeat className="w-5 h-5 sm:w-6 sm:h-6" />
                  {loopMode === 'track' && <span className="absolute -bottom-1 -right-2 text-[10px] bg-primary text-background rounded-full w-4 h-4 flex items-center justify-center font-bold">1</span>}
                </button>
                <button 
@@ -980,7 +1021,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
                  className={`transition-colors ${showLyrics ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
                  title="Toggle Lyrics"
                >
-                 <Mic2 className="w-6 h-6" />
+                 <Mic2 className="w-5 h-5 sm:w-6 sm:h-6" />
                </button>
              </div>
           </div>
