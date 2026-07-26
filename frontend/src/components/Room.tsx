@@ -157,6 +157,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
   const isPlayingRef = useRef(isPlaying);
   const isTransitioningRef = useRef(false);
   const initialSeekRef = useRef<number>(0);
+  const roomStatusRef = useRef<'playing' | 'paused' | 'waiting'>('waiting');
 
   const executePlayNext = useCallback(() => {
     if (!isHostRef.current && !allowGuestControlRef.current) return;
@@ -180,12 +181,14 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
       if (audioRef.current.src !== newSrc) {
         audioRef.current.src = newSrc;
         audioRef.current.load();
-        audioRef.current.play()
-          .then(() => setPlayBlocked(false))
-          .catch(e => {
-            console.warn('[Jammer] Auto-play blocked:', e);
-            setPlayBlocked(true);
-          });
+        if (roomStatusRef.current === 'playing') {
+          audioRef.current.play()
+            .then(() => setPlayBlocked(false))
+            .catch(e => {
+              console.warn('[Jammer] Auto-play blocked:', e);
+              setPlayBlocked(true);
+            });
+        }
       }
     } else if (audioRef.current && !videoId) {
       audioRef.current.pause();
@@ -364,11 +367,12 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
           initialSeekRef.current = room.currentTimestamp;
           // Also set immediately if src is already correct (e.g., reconnect)
           if (audioRef.current && audioRef.current.src.includes(room.currentVideoId)) {
-            if (Math.abs(audioRef.current.currentTime - room.currentTimestamp) > 2) {
+            if (Math.abs(audioRef.current.currentTime - room.currentTimestamp) > 5) {
               audioRef.current.currentTime = room.currentTimestamp;
             }
             initialSeekRef.current = 0;
             
+            roomStatusRef.current = room.status;
             if (room.status === 'playing') {
               audioRef.current.play()
                 .then(() => setPlayBlocked(false))
@@ -402,6 +406,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
     socket.on('sync:play', (data: { videoId: string, timestamp: number, executeAt: number, track?: any }) => {
       console.log('[Jammer] sync:play received:', data.videoId, '@', data.timestamp);
+      roomStatusRef.current = 'playing';
       
       if (data.track) {
         setCurrentTrack(data.track);
@@ -441,6 +446,7 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
 
     socket.on('sync:pause', (data: { timestamp: number }) => {
       console.log('[Jammer] sync:pause received @', data.timestamp);
+      roomStatusRef.current = 'paused';
       if (audioRef.current) {
         audioRef.current.currentTime = data.timestamp;
         audioRef.current.pause();
