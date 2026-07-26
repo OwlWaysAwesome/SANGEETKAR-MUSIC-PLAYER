@@ -185,8 +185,12 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
           audioRef.current.play()
             .then(() => setPlayBlocked(false))
             .catch(e => {
-              console.warn('[Jammer] Auto-play blocked:', e);
-              setPlayBlocked(true);
+              if (e.name === 'NotAllowedError') {
+                console.warn('[Jammer] Auto-play blocked:', e);
+                setPlayBlocked(true);
+              } else {
+                console.error('[Jammer] Playback failed (media error):', e);
+              }
             });
         }
       }
@@ -377,8 +381,12 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
               audioRef.current.play()
                 .then(() => setPlayBlocked(false))
                 .catch(e => {
-                  console.warn('[Jammer] Play blocked on room_state:', e);
-                  setPlayBlocked(true);
+                  if (e.name === 'NotAllowedError') {
+                    console.warn('[Jammer] Play blocked on room_state:', e);
+                    setPlayBlocked(true);
+                  } else {
+                    console.error('[Jammer] Playback failed on room_state:', e);
+                  }
                 });
             } else {
               audioRef.current.pause();
@@ -431,8 +439,12 @@ const Room: React.FC<RoomProps> = ({ roomId }) => {
           audioRef.current.play()
             .then(() => setPlayBlocked(false))
             .catch(e => {
-              console.warn('[Jammer] Play blocked:', e);
-              setPlayBlocked(true);
+              if (e.name === 'NotAllowedError') {
+                console.warn('[Jammer] Play blocked:', e);
+                setPlayBlocked(true);
+              } else {
+                console.error('[Jammer] Playback failed:', e);
+              }
             });
         }
       };
